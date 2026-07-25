@@ -3,56 +3,73 @@ import TopNavbar from "../Components/TopNavbar";
 import { IoMdAdd } from "react-icons/io";
 import { MdClose } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
-import image from "../images/user.png";
-import { createNotification, getAllNotifications, deleteNotification } from "../features/notificationSlice"; 
-import { getSocket } from "../lib/socket"; // Import the getSocket function
-import toast from 'react-hot-toast';
+import defaultUserImg from "../images/user.png";
+import {
+  createNotification,
+  getAllNotifications,
+  deleteNotification,
+} from "../features/notificationSlice";
+import { getSocket } from "../lib/socket";
+import toast from "react-hot-toast";
 import FormattedTime from "../lib/FormattedTime ";
 
 function NotificationPage() {
   const dispatch = useDispatch();
-  const { notifications } = useSelector((state) => state.notification);
+  const { notifications = [] } = useSelector((state) => state.notification);
   const { Authuser } = useSelector((state) => state.auth);
+
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const [socket, setSocket] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const newSocket = getSocket();
-    setSocket(newSocket);
+    const socket = getSocket();
 
     dispatch(getAllNotifications());
 
-    newSocket.on("newNotification", (newNotification) => {
-   
-      toast.custom((t) => (
-        <div className={`flex items-center p-4 rounded-lg shadow-lg bg-white text-gray-800 ${t.visible ? 'animate-enter' : 'animate-leave'}`}>
-          <img 
-            src={Authuser?.ProfilePic || image} 
-            alt="Notification" 
-            className="w-10 h-10 rounded-full mr-3"
-          />
-          <div>
-            <p className="font-medium">{newNotification.name}</p>
-            <p className="text-sm text-gray-600">{newNotification.type}</p>
-          </div>
-          <button 
-            onClick={() => toast.dismiss(t.id)}
-            className="ml-4 text-gray-500 hover:text-gray-700"
+    const handleNewNotification = (newNotification) => {
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex items-center gap-3 p-4 rounded-xl shadow-lg bg-base-200 border border-base-300 text-base-content ${
+              t.visible ? "animate-enter" : "animate-leave"
+            }`}
           >
-            &times;
-          </button>
-        </div>
-      ), {
-        duration: 4000,
-        position: 'top-right',
-      });
+            <img
+              src={Authuser?.ProfilePic || defaultUserImg}
+              alt="Notification sender"
+              className="w-10 h-10 rounded-full object-cover shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">
+                {newNotification.name}
+              </p>
+              <p className="text-xs opacity-75 line-clamp-2">
+                {newNotification.type}
+              </p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="text-sm opacity-50 hover:opacity-100 p-1 cursor-pointer"
+              aria-label="Close toast"
+            >
+              &times;
+            </button>
+          </div>
+        ),
+        {
+          duration: 4000,
+          position: "top-right",
+        }
+      );
       dispatch(getAllNotifications());
-    });
+    };
+
+    socket.on("newNotification", handleNewNotification);
 
     return () => {
-      newSocket.disconnect();
+      socket.off("newNotification", handleNewNotification);
     };
   }, [dispatch, Authuser?.ProfilePic]);
 
@@ -63,105 +80,162 @@ function NotificationPage() {
 
   const submitNotification = async (event) => {
     event.preventDefault();
-    const NotificationData = { name, type };
+    if (!name.trim() || !type.trim()) return;
 
-    dispatch(createNotification(NotificationData))
+    setIsSubmitting(true);
+    const notificationData = { name, type };
+
+    dispatch(createNotification(notificationData))
+      .unwrap()
       .then(() => {
         toast.success("Notification added successfully");
         resetForm();
         setIsFormVisible(false);
       })
-      .catch(() => {
-        toast.error("Failed to add notification");
+      .catch((err) => {
+        toast.error(err?.message || "Failed to add notification");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  };
+
+  const handleDelete = (id) => {
+    dispatch(deleteNotification(id))
+      .unwrap()
+      .then(() => {
+        toast.success("Notification removed");
+      })
+      .catch((err) => {
+        toast.error(err?.message || "Failed to delete notification");
       });
   };
 
   return (
-    <div className="bg-base-100 min-h-screen">
+    <div className="bg-base-100 text-base-content min-h-screen transition-colors duration-300 pb-12">
       <TopNavbar />
 
-      <div className="max-w-3xl bg-base-100 mx-auto mt-10">
+      <main className="max-w-3xl mx-auto px-4 mt-8">
+        {/* Header Actions */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Notifications</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
+            <p className="text-xs opacity-60">
+              Manage broadcast messages and account alerts
+            </p>
+          </div>
           <button
-            onClick={() => setIsFormVisible(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition"
+            onClick={() => setIsFormVisible((prev) => !prev)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer shadow-xs"
           >
-            <IoMdAdd className="text-xl mr-2" /> Add Notification
+            <IoMdAdd className="text-lg" /> Add Notification
           </button>
         </div>
 
+        {/* Modal/Form Container */}
         {isFormVisible && (
-          <div className="p-6 rounded-lg bg-base-100 shadow-md mb-6">
-            <div className="flex bg-base-100 justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Add Notification</h2>
-              <MdClose 
-                className="text-2xl cursor-pointer" 
-                onClick={() => setIsFormVisible(false)} 
-              />
+          <div className="p-6 rounded-2xl bg-base-200 border border-base-300 shadow-sm mb-6 transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">New Notification</h2>
+              <button
+                onClick={() => setIsFormVisible(false)}
+                className="opacity-60 hover:opacity-100 transition-opacity p-1"
+                aria-label="Close form"
+              >
+                <MdClose className="text-xl" />
+              </button>
             </div>
-            <form onSubmit={submitNotification}>
-              <div className="mb-4">
-                <label className="block font-medium">Title</label>
+
+            <form onSubmit={submitNotification} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">
+                  Title
+                </label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   type="text"
-                  className="w-full h-10 px-3 border rounded-lg mt-2"
-                  placeholder="Enter title"
+                  className="w-full px-3 py-2.5 bg-base-100 border border-base-300 rounded-xl focus:outline-hidden focus:border-emerald-500 text-sm"
+                  placeholder="Enter notification title"
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label className="block font-medium">Description</label>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">
+                  Description
+                </label>
                 <textarea
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full h-24 px-3 border rounded-lg mt-2"
-                  placeholder="Enter description"
+                  className="w-full h-24 px-3 py-2 bg-base-100 border border-base-300 rounded-xl focus:outline-hidden focus:border-emerald-500 text-sm resize-none"
+                  placeholder="Enter notification message"
                   required
                 ></textarea>
               </div>
-              <button
-                type="submit"
-                className="bg-blue-600 text-white w-full h-12 rounded-lg hover:bg-blue-700 transition"
-              >
-                Add Notification
-              </button>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFormVisible(false)}
+                  className="px-4 py-2 bg-base-300 hover:bg-base-100 text-sm font-medium rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shadow-xs cursor-pointer"
+                >
+                  {isSubmitting ? "Posting..." : "Publish Notification"}
+                </button>
+              </div>
             </form>
           </div>
         )}
 
-        <div className="space-y-4 bg-base-100">
+        {/* Notifications List */}
+        <div className="space-y-3">
           {notifications.length > 0 ? (
             notifications.map((notification) => (
-              <div key={notification._id} className="flex items-center bg-base-300 p-4 rounded-lg shadow-md hover:bg-base-200 transition">
-                <img 
-                  src={Authuser?.ProfilePic || image} 
-                  alt="User" 
-                  className="w-12 h-12 rounded-full mr-4 object-cover"
+              <div
+                key={notification._id}
+                className="flex items-start gap-4 bg-base-200 border border-base-300 p-4 rounded-2xl hover:border-emerald-500/30 transition-all shadow-xs"
+              >
+                <img
+                  src={Authuser?.ProfilePic || defaultUserImg}
+                  alt="User"
+                  className="w-11 h-11 rounded-full object-cover shrink-0 border border-base-300 mt-0.5"
                 />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{notification.name}</h3>
-                  <p className="text-sm text-gray-600">{notification.type}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    <FormattedTime timestamp={notification.createdAt}/>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold tracking-tight">
+                    {notification.name}
+                  </h3>
+                  <p className="text-xs opacity-75 mt-0.5 leading-relaxed break-words">
+                    {notification.type}
                   </p>
+                  <div className="text-[10px] opacity-50 mt-2 font-mono">
+                    <FormattedTime timestamp={notification.createdAt} />
+                  </div>
                 </div>
+
                 <button
-                  onClick={() => dispatch(deleteNotification(notification._id))}
-                  className="text-red-600 hover:text-red-800 transition p-2"
+                  onClick={() => handleDelete(notification._id)}
+                  className="opacity-40 hover:opacity-100 text-rose-500 transition-opacity p-1.5 rounded-lg hover:bg-rose-500/10 cursor-pointer"
                   aria-label="Delete notification"
                 >
-                  <MdClose className="text-2xl" />
+                  <MdClose className="text-lg" />
                 </button>
               </div>
             ))
           ) : (
-            <p className="text-center bg-base-100 text-gray-600 py-4">No notifications found.</p>
+            <div className="text-center bg-base-200 border border-base-300 rounded-2xl py-12 px-4">
+              <p className="text-sm opacity-60">No notifications found.</p>
+            </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

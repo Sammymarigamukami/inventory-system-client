@@ -3,7 +3,6 @@ import HomePage from "./pages/HomePage";
 import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
 import SignupPage from "./pages/SignupPages";
-import ServicePage from "./pages/ServicePage";
 import LoginPage from "./pages/LoginPage";
 import Profilepage from "./pages/Profilepage";
 import ManagerDashboard from "./pages/ManagerDashboard";
@@ -30,7 +29,6 @@ function App() {
         <Toaster />
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<ServicePage />} />
           <Route path="/SignupPage" element={<SignupPage />} />
           <Route path="/LoginPage" element={<LoginPage />} />
 

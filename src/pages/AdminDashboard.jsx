@@ -1,24 +1,24 @@
 import React from 'react';
 import Sidebar from '../Components/Sidebar';
 import { Outlet } from 'react-router-dom';
-function AdminDashboard() {
-  
-  return (
-    <div className="flex bg-gray-200 min-h-screen">
 
-      <div className="fixed h-full">
+function AdminDashboard() {
+  return (
+    <div className="flex bg-base-100 text-base-content min-h-screen transition-colors duration-300">
+      
+      {/* Fixed Sidebar */}
+      <div className="fixed top-0 left-0 h-full z-30">
         <Sidebar />
       </div>
 
-     
-      <div className="flex-1 pl-64"> 
+      {/* Main Content Area */}
+      <main className="flex-1 pl-64 min-h-screen overflow-x-hidden">
         <Outlet />
-      </div>
+      </main>
+
     </div>
   );
 }
 
-export default AdminDashboard
-
-
+export default AdminDashboard;
 

@@ -10,6 +10,7 @@ import {
   SearchSupplier,
   EditSupplier,
 } from "../features/SupplierSlice";
+import { gettingallproducts } from "../features/productSlice";
 import toast from "react-hot-toast";
 import FormattedTime from "../lib/FormattedTime ";
 
@@ -19,6 +20,7 @@ function Supplierpage() {
   );
   const { getallproduct } = useSelector((state) => state.product);
   const dispatch = useDispatch();
+
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [Phone, setPhone] = useState("");
@@ -30,8 +32,10 @@ function Supplierpage() {
 
   useEffect(() => {
     dispatch(gettingallSupplier());
-  }, [dispatch, deleteSupplier, editedsupplier]);
+    dispatch(gettingallproducts());
+  }, [dispatch, editedsupplier]);
 
+  // Debounced search logic
   useEffect(() => {
     if (query.trim() !== "") {
       const timeoutId = setTimeout(() => {
@@ -52,9 +56,24 @@ function Supplierpage() {
     setSelectedSupplier(null);
   };
 
+  const handleEditClick = (supplier) => {
+    setSelectedSupplier(supplier);
+    setName(supplier.name || "");
+    setPhone(supplier.contactInfo?.phone || "");
+    setEmail(supplier.contactInfo?.email || "");
+    setAddress(supplier.contactInfo?.address || "");
+
+    // Handle array or populated object structure for products
+    const initialProduct = Array.isArray(supplier?.productsSupplied)
+      ? supplier.productsSupplied[0]?._id || supplier.productsSupplied[0] || ""
+      : supplier?.productsSupplied?._id || supplier?.productsSupplied || "";
+
+    setProduct(initialProduct);
+    setIsFormVisible(true);
+  };
+
   const handleEditSubmit = (event) => {
     event.preventDefault();
-
     if (!selectedSupplier) return;
 
     const updatedData = {
@@ -64,7 +83,7 @@ function Supplierpage() {
         email: Email,
         address: Address,
       },
-      productsSupplied: [Product],
+      productsSupplied: Product ? [Product] : [],
     };
 
     dispatch(EditSupplier({ supplierId: selectedSupplier._id, updatedData }))
@@ -72,32 +91,10 @@ function Supplierpage() {
       .then(() => {
         toast.success("Supplier updated successfully");
         setIsFormVisible(false);
-        setSelectedSupplier(null);
         resetForm();
       })
       .catch(() => {
         toast.error("Failed to update supplier");
-      });
-  };
-
-  const handleEditClick = (supplier) => {
-    setSelectedSupplier(supplier);
-    setName(supplier.name);
-    setPhone(supplier.contactInfo?.phone);
-    setEmail(supplier.contactInfo?.email);
-    setAddress(supplier.contactInfo?.address);
-    setProduct(supplier?.productsSupplied._id);
-    setIsFormVisible(true);
-  };
-
-  const handleRemove = async (SupplierId) => {
-    dispatch(deleteSupplier(SupplierId))
-      .unwrap()
-      .then(() => {
-        toast.success("Supplier removed successfully");
-      })
-      .catch((error) => {
-        toast.error(error || "Failed to remove Supplier");
       });
   };
 
@@ -111,193 +108,263 @@ function Supplierpage() {
         email: Email,
         address: Address,
       },
-      productsSupplied: Product,
+      productsSupplied: Product ? [Product] : [],
     };
+
     dispatch(CreateSupplier(supplierInfo))
       .unwrap()
       .then(() => {
         toast.success("Supplier added successfully");
+        setIsFormVisible(false);
         resetForm();
         dispatch(gettingallSupplier());
       })
       .catch(() => {
-        toast.error("Supplier add unsuccessful");
+        toast.error("Failed to add supplier");
+      });
+  };
+
+  const handleRemove = async (supplierId) => {
+    dispatch(deleteSupplier(supplierId))
+      .unwrap()
+      .then(() => {
+        toast.success("Supplier removed successfully");
+      })
+      .catch((error) => {
+        toast.error(error || "Failed to remove supplier");
       });
   };
 
   const displaySuppliers = query.trim() !== "" ? searchdata : getallSupplier;
 
   if (!getallSupplier) {
-    return <div>Loading suppliers...</div>;
+    return (
+      <div className="min-h-screen bg-base-100 flex items-center justify-center text-base-content">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-base-100 min-h-screen">
+    <div className="bg-base-100 min-h-screen text-base-content transition-colors duration-300">
       <TopNavbar />
-      <div className="mt-10 ml-5 mb-10">
-      <div className="bg-blue-950 w-56 rounded-xl  ml-10 block h-24">
-          <h1 className="text-white ml-12 block pt-5 font-bold">Total Supplier</h1>
-          <p className="text-white font-bold  pt-2  ml-24">{getallSupplier?.length || "0"}</p>
 
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Metric Cards Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="bg-base-200 border border-base-300 p-6 rounded-2xl shadow-xs">
+            <h2 className="text-xs font-semibold uppercase tracking-wider opacity-60">
+              Total Suppliers
+            </h2>
+            <p className="text-3xl font-bold mt-2">
+              {getallSupplier?.length || 0}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center space-x-4  mt-10">
+
+        {/* Search and Action Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full md:w-96 h-12 pl-4 pr-12 border-2 border-gray-300 rounded-lg bg-base-100"
-            placeholder="Search for supplier"
+            className="w-full sm:w-96 h-11 px-4 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            placeholder="Search suppliers by name or email..."
           />
+
           <button
             onClick={() => {
-              setIsFormVisible(true);
-              setSelectedSupplier(null);
               resetForm();
+              setIsFormVisible(true);
             }}
-            className="bg-blue-800 text-white w-40 h-12 rounded-lg flex items-center justify-center"
+            className="w-full sm:w-auto h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs"
           >
-            <IoMdAdd className="text-xl mr-2" /> Add Supplier
+            <IoMdAdd className="text-xl" /> Add Supplier
           </button>
         </div>
 
+        {/* Side Drawer Form Overlay */}
         {isFormVisible && (
-          <div className="absolute top-16 bg-base-100 right-0 h-svh p-6 border-2 border-gray-300 rounded-lg shadow-md transition-transform transform">
-            <div className="text-right">
-              <MdKeyboardDoubleArrowLeft
-                onClick={() => setIsFormVisible(false)}
-                className="cursor-pointer text-2xl"
-              />
-            </div>
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+            <div className="w-full max-w-md bg-base-100 h-full p-6 border-l border-base-300 overflow-y-auto shadow-2xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-4 border-b border-base-300 mb-6">
+                  <h2 className="text-lg font-bold">
+                    {selectedSupplier ? "Edit Supplier" : "Add Supplier"}
+                  </h2>
+                  <button
+                    onClick={() => setIsFormVisible(false)}
+                    className="p-2 hover:bg-base-200 rounded-lg transition-colors"
+                  >
+                    <MdKeyboardDoubleArrowLeft className="text-2xl" />
+                  </button>
+                </div>
 
-            <h1 className="text-xl font-semibold mb-4">
-              {selectedSupplier ? "Edit Supplier" : "Add Supplier"}
-            </h1>
-
-            <form onSubmit={selectedSupplier ? handleEditSubmit : submitSupplier}>
-              <div className="mb-4">
-                <label>Name</label>
-                <input
-                  value={name}
-                  placeholder="Enter Supplier name"
-                  onChange={(e) => setName(e.target.value)}
-                  type="text"
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2 bg-base-100"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Phone</label>
-                <input
-                  value={Phone}
-                  placeholder="Enter Supplier Phone"
-                  onChange={(e) => setPhone(e.target.value)}
-                  type="text"
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2 bg-base-100"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Email</label>
-                <input
-                  value={Email}
-                  placeholder="example@email.com"
-                  onChange={(e) => setEmail(e.target.value)}
-                  type="email"
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2 bg-base-100"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Address</label>
-                <input
-                  type="text"
-                  placeholder="Enter Supplier Address"
-                  value={Address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2 bg-base-100"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Product</label>
-                <select
-                  value={Product}
-                  onChange={(e) => setProduct(e.target.value)}
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2 bg-base-100"
+                <form
+                  id="supplier-form"
+                  onSubmit={selectedSupplier ? handleEditSubmit : submitSupplier}
+                  className="space-y-4"
                 >
-                  <option value="">Select a product</option>
-                  {getallproduct?.map((product) => (
-                    <option key={product._id} value={product._id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Supplier Name
+                    </label>
+                    <input
+                      value={name}
+                      placeholder="e.g. Acme Logistics"
+                      onChange={(e) => setName(e.target.value)}
+                      type="text"
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Phone Number
+                    </label>
+                    <input
+                      value={Phone}
+                      placeholder="+254 700 000 000"
+                      onChange={(e) => setPhone(e.target.value)}
+                      type="text"
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Email Address
+                    </label>
+                    <input
+                      value={Email}
+                      placeholder="contact@supplier.com"
+                      onChange={(e) => setEmail(e.target.value)}
+                      type="email"
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Physical Address
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="City, Industrial Area"
+                      value={Address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Product Supplied
+                    </label>
+                    <select
+                      value={Product}
+                      onChange={(e) => setProduct(e.target.value)}
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">Select a product (optional)</option>
+                      {getallproduct?.map((prod) => (
+                        <option key={prod._id} value={prod._id}>
+                          {prod.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </form>
               </div>
 
-              <button
-                type="submit"
-                className="bg-blue-800 text-white w-full h-12 rounded-lg hover:bg-blue-700 mt-4"
-              >
-                {selectedSupplier ? "Update Supplier" : "Add Supplier"}
-              </button>
-            </form>
+              <div className="pt-6 border-t border-base-300 mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsFormVisible(false)}
+                  className="w-1/2 h-11 border border-base-300 hover:bg-base-200 rounded-xl font-medium text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="supplier-form"
+                  className="w-1/2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-sm transition-colors"
+                >
+                  {selectedSupplier ? "Update" : "Save Supplier"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4">Supplier List</h2>
+        {/* Suppliers Data Table */}
+        <div className="bg-base-100 border border-base-300 rounded-2xl shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-base-300">
+            <h2 className="font-semibold text-lg">Supplier Directory</h2>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-base-100 border border-gray-200 rounded-lg shadow-md">
-              <thead className="bg-base-100">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-base-200/50 border-b border-base-300 text-xs uppercase opacity-70">
                 <tr>
-                  <th className="px-3 py-2 border">#</th>
-                  <th className="px-3 py-2 border">Name</th>
-                  <th className="px-3 py-2 border">Phone</th>
-                  <th className="px-3 py-2 border">Email</th>
-                  <th className="px-3 py-2 border">Address</th>
-                  <th className="px-3 py-2 border">Add time</th>
-                  <th className="px-3 py-2 border">Actions</th>
+                  <th className="px-4 py-3 w-12 text-center">#</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Address</th>
+                  <th className="px-4 py-3">Created</th>
+                  <th className="px-4 py-3 text-center w-48">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {Array.isArray(displaySuppliers) &&
-                displaySuppliers.length > 0 ? (
-                  displaySuppliers?.map((supplier, index) => (
-                    <tr key={supplier._id} className="">
-                      <td className="px-3 py-2 border">{index + 1}</td>
-                      <td className="px-3 py-2 border">{supplier.name}</td>
-                      <td className="px-3 py-2 border">
-                        {supplier.contactInfo?.phone}
+              <tbody className="divide-y divide-base-300">
+                {Array.isArray(displaySuppliers) && displaySuppliers.length > 0 ? (
+                  displaySuppliers.map((supplier, index) => (
+                    <tr
+                      key={supplier._id}
+                      className="hover:bg-base-200/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-center font-mono opacity-60">
+                        {index + 1}
                       </td>
-                      <td className="px-3 py-2 border">
-                        {supplier.contactInfo?.email}
+                      <td className="px-4 py-3 font-semibold">{supplier.name}</td>
+                      <td className="px-4 py-3 font-mono opacity-80">
+                        {supplier.contactInfo?.phone || "N/A"}
                       </td>
-                      <td className="px-3 py-2 border">
-                        {supplier.contactInfo?.address}
+                      <td className="px-4 py-3 opacity-80">
+                        {supplier.contactInfo?.email || "N/A"}
                       </td>
-                      <td className="px-3 py-2 border">
+                      <td className="px-4 py-3 opacity-70">
+                        {supplier.contactInfo?.address || "N/A"}
+                      </td>
+                      <td className="px-4 py-3 opacity-60 text-xs">
                         <FormattedTime timestamp={supplier.createdAt} />
                       </td>
-                      <td className="px-4 py-2 border">
-                        <button
-                          onClick={() => handleRemove(supplier?._id)}
-                          className="h-10 w-24 bg-red-500 hover:bg-red-700 rounded-md text-white"
-                        >
-                          Remove
-                        </button>
-                        <button
-                          onClick={() => handleEditClick(supplier)}
-                          className="h-10 w-24 bg-green-500 hover:bg-green-700 rounded-md text-white ml-2"
-                        >
-                          Edit
-                        </button>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEditClick(supplier)}
+                            className="px-3 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleRemove(supplier._id)}
+                            className="px-3 py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center py-4">
-                      No Supplier found.
+                    <td colSpan="7" className="text-center py-12 opacity-50">
+                      No suppliers found matching your criteria.
                     </td>
                   </tr>
                 )}
@@ -305,7 +372,7 @@ function Supplierpage() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

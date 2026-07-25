@@ -20,13 +20,14 @@ function Productpage() {
   );
   const { getallCategory } = useSelector((state) => state.category);
   const dispatch = useDispatch();
+
   const [query, setquery] = useState("");
   const [name, setName] = useState("");
   const [Category, setCategory] = useState("");
   const [Price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [Desciption, setDesciption] = useState("");
-  const [dateAdded, setDateAdded] = useState(new Date().toISOString().split('T')[0]); // Initialize with current date
+  const [dateAdded, setDateAdded] = useState(new Date().toISOString().split("T")[0]);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -35,6 +36,7 @@ function Productpage() {
     dispatch(gettingallCategory());
   }, [dispatch, editedProduct, isproductadd]);
 
+  // Debounced Search Handler
   useEffect(() => {
     if (query.trim() !== "") {
       const repeatTimeout = setTimeout(() => {
@@ -45,6 +47,16 @@ function Productpage() {
       dispatch(gettingallproducts());
     }
   }, [query, dispatch]);
+
+  const resetForm = () => {
+    setName("");
+    setCategory("");
+    setPrice("");
+    setQuantity("");
+    setDesciption("");
+    setSelectedProduct(null);
+    setDateAdded(new Date().toISOString().split("T")[0]);
+  };
 
   const handleremove = async (productId) => {
     dispatch(Removeproduct(productId))
@@ -57,18 +69,27 @@ function Productpage() {
       });
   };
 
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setName(product.name || "");
+    setCategory(product.Category?._id || product.Category || "");
+    setPrice(product.Price || "");
+    setQuantity(product.quantity || "");
+    setDesciption(product.Desciption || "");
+    setIsFormVisible(true);
+  };
+
   const handleEditSubmit = (event) => {
     event.preventDefault();
-
     if (!selectedProduct) return;
 
     const updatedData = {
       name,
       Category,
-      Price,
-      quantity,
+      Price: Number(Price),
+      quantity: Number(quantity),
       Desciption,
-      dateAdded: selectedProduct.dateAdded || new Date().toISOString() 
+      dateAdded: selectedProduct.dateAdded || new Date().toISOString(),
     };
 
     dispatch(EditProduct({ id: selectedProduct._id, updatedData }))
@@ -76,7 +97,6 @@ function Productpage() {
       .then(() => {
         toast.success("Product updated successfully");
         setIsFormVisible(false);
-        setSelectedProduct(null);
         resetForm();
       })
       .catch(() => {
@@ -86,244 +106,288 @@ function Productpage() {
 
   const submitProduct = async (event) => {
     event.preventDefault();
-    const productData = { 
-      name, 
-      Desciption, 
-      Category, 
-      Price, 
-      quantity,
-      dateAdded: new Date(dateAdded).toISOString() 
+    const productData = {
+      name,
+      Desciption,
+      Category,
+      Price: Number(Price),
+      quantity: Number(quantity),
+      dateAdded: new Date(dateAdded).toISOString(),
     };
 
     dispatch(Addproduct(productData))
       .unwrap()
       .then(() => {
         toast.success("Product added successfully");
+        setIsFormVisible(false);
         resetForm();
       })
       .catch(() => {
-        toast.error("Product add unsuccessful");
+        toast.error("Failed to add product");
       });
-  };
-
-  const resetForm = () => {
-    setName("");
-    setCategory("");
-    setPrice("");
-    setQuantity("");
-    setDesciption("");
-   
-  };
-
-  const handleEditClick = (product) => {
-    setSelectedProduct(product);
-    setName(product.name);
-    setCategory(product.Category?._id || "");
-    setPrice(product.Price);
-    setQuantity(product.quantity);
-    setDesciption(product.Desciption);
-  
-   
-    setIsFormVisible(true);
   };
 
   const displayProducts = query.trim() !== "" ? searchdata : getallproduct;
 
+  // Total inventory valuation calculation
+  const totalStoreValue =
+    getallproduct?.reduce((total, prod) => {
+      const price = Number(prod.Price) || 0;
+      const qty = Number(prod.quantity) || 1;
+      return total + price * qty;
+    }, 0) || 0;
+
   return (
-    <div className="bg-base-100 min-h-screen">
+    <div className="bg-base-100 min-h-screen text-base-content transition-colors duration-300">
       <TopNavbar />
 
-      <div className="mt-10 flex">
-        <div className="bg-blue-950 w-56 rounded-xl ml-10 block h-24">
-          <h1 className="text-white ml-12 block pt-5 font-bold">Total Product</h1>
-          <p className="text-white font-bold pt-2 ml-24">{getallproduct?.length || "0"}</p>
-        </div>
-        <div className="bg-blue-950 ml-10 rounded-xl block w-56 h-24">
-          <h1 className="text-white font-bold ml-12 pt-5">Total store value</h1>
-          <p className="text-white font-bold pt-2 ml-24">Ksh
-            {getallproduct?.reduce((totalAmount, product) => {
-              return totalAmount + product.Price;
-            }, 0) || "0"}
-          </p>
-        </div>
-        <div className="bg-blue-950 bg-base-100 w-56 rounded-xl ml-10 block h-24">
-          <h1 className="text-white font-bold ml-12 pt-5">Total Category</h1>
-          <p className="text-white font-bold pt-2 ml-24"> {getallCategory?.length || "0"}</p>
-        </div>
-      </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Top Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="bg-base-200 border border-base-300 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider opacity-60">
+              Total Products
+            </h2>
+            <p className="text-3xl font-bold mt-2">{getallproduct?.length || 0}</p>
+          </div>
 
-      <div className="mt-12 ml-5">
-        <div className="flex items-center space-x-4">
+          <div className="bg-base-200 border border-base-300 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider opacity-60">
+              Total Store Value
+            </h2>
+            <p className="text-3xl font-bold mt-2 text-emerald-500">
+              Ksh {totalStoreValue.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="bg-base-200 border border-base-300 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider opacity-60">
+              Total Categories
+            </h2>
+            <p className="text-3xl font-bold mt-2">{getallCategory?.length || 0}</p>
+          </div>
+        </div>
+
+        {/* Action & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <input
             type="text"
             value={query}
             onChange={(e) => setquery(e.target.value)}
-            className="w-full md:w-96 h-12 pl-4 pr-12 border-2 border-gray-300 rounded-lg"
-            placeholder="Enter your product"
+            className="w-full sm:w-96 h-11 px-4 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            placeholder="Search products by name..."
           />
+
           <button
             onClick={() => {
+              resetForm();
               setIsFormVisible(true);
-              setSelectedProduct(null);
             }}
-            className="bg-blue-800 text-white w-40 h-12 rounded-lg flex items-center justify-center"
+            className="w-full sm:w-auto h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
           >
-            <IoMdAdd className="text-xl mr-2" /> Add Product
+            <IoMdAdd className="text-xl" /> Add New Product
           </button>
         </div>
 
+        {/* Sliding Side Form Drawer Overlay */}
         {isFormVisible && (
-          <div className="absolute top-16 bg-gray-100 right-0 h-svh p-6 border-2 border-gray-300 rounded-lg shadow-md transition-transform transform">
-            <div className="text-right">
-              <MdKeyboardDoubleArrowLeft
-                onClick={() => setIsFormVisible(false)}
-                className="cursor-pointer text-2xl"
-              />
-            </div>
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+            <div className="w-full max-w-md bg-base-100 h-full p-6 border-l border-base-300 overflow-y-auto shadow-2xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-4 border-b border-base-300 mb-6">
+                  <h2 className="text-lg font-bold">
+                    {selectedProduct ? "Edit Product" : "Add Product"}
+                  </h2>
+                  <button
+                    onClick={() => setIsFormVisible(false)}
+                    className="p-2 hover:bg-base-200 rounded-lg transition-colors"
+                  >
+                    <MdKeyboardDoubleArrowLeft className="text-2xl" />
+                  </button>
+                </div>
 
-            <h1 className="text-xl font-semibold mb-4">
-              {selectedProduct ? "Edit Product" : "Add Product"}
-            </h1>
-
-            <form onSubmit={selectedProduct ? handleEditSubmit : submitProduct}>
-              <div className="mb-4">
-                <label>Name</label>
-                <input
-                  value={name}
-                  placeholder="Enter product name"
-                  onChange={(e) => setName(e.target.value)}
-                  type="text"
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Category</label>
-                <select
-                  value={Category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2"
-                  required
+                <form
+                  id="product-form"
+                  onSubmit={selectedProduct ? handleEditSubmit : submitProduct}
+                  className="space-y-4"
                 >
-                  <option value="">Select a category</option>
-                  {getallCategory?.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Product Name
+                    </label>
+                    <input
+                      value={name}
+                      placeholder="e.g. Wireless Mouse"
+                      onChange={(e) => setName(e.target.value)}
+                      type="text"
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Category
+                    </label>
+                    <select
+                      value={Category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      required
+                    >
+                      <option value="">Select a category</option>
+                      {getallCategory?.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Description
+                    </label>
+                    <textarea
+                      value={Desciption}
+                      placeholder="Brief details about the product..."
+                      onChange={(e) => setDesciption(e.target.value)}
+                      rows={3}
+                      className="w-full p-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                        Price (Ksh)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0.00"
+                        value={Price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                        Quantity
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </form>
               </div>
 
-              <div className="mb-4">
-                <label>Description</label>
-                <input
-                  value={Desciption}
-                  placeholder="Enter product description"
-                  onChange={(e) => setDesciption(e.target.value)}
-                  type="text"
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2"
-                  required
-                />
+              <div className="pt-6 border-t border-base-300 mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsFormVisible(false)}
+                  className="w-1/2 h-11 border border-base-300 hover:bg-base-200 rounded-xl font-medium text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="product-form"
+                  className="w-1/2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-sm transition-colors"
+                >
+                  {selectedProduct ? "Update" : "Save Product"}
+                </button>
               </div>
-
-              <div className="mb-4">
-                <label>Price</label>
-                <input
-                  type="number"
-                  placeholder="Enter product price"
-                  value={Price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2"
-                  required
-                  min="0"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label>Quantity</label>
-                <input
-                  type="number"
-                  placeholder="Enter product quantity"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full h-10 px-2 border-2 rounded-lg mt-2"
-                  required
-                  min="0"
-                />
-              </div>
-
-              
-
-              <button
-                type="submit"
-                className="bg-blue-800 text-white w-full h-12 rounded-lg hover:bg-blue-700 mt-4"
-              >
-                {selectedProduct ? "Update Product" : "Add Product"}
-              </button>
-            </form>
+            </div>
           </div>
         )}
 
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4">Product List</h2>
+        {/* Product Table */}
+        <div className="bg-base-100 border border-base-300 rounded-2xl shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-base-300">
+            <h2 className="font-semibold text-lg">Inventory List</h2>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-base-100 border mb-24 border-gray-200 rounded-lg shadow-md">
-              <thead className="">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-base-200/50 border-b border-base-300 text-xs uppercase opacity-70">
                 <tr>
-                  <th className="px-3 py-2 border w-5">#</th>
-                  <th className="px-3 py-2 border">Name</th>
-                  <th className="px-3 py-2 border">Category</th>
-                  <th className="px-3 py-2 border">Description</th>
-                  <th className="px-3 py-2 border">Quantity</th>
-                  <th className="px-3 py-2 border">Price</th>
-                  <th className="px-3 py-2 border">Date </th>
-                  <th className="px-3 py-2 w-72 border">Operations</th>
+                  <th className="px-4 py-3 w-12 text-center">#</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Description</th>
+                  <th className="px-4 py-3 text-center">Qty</th>
+                  <th className="px-4 py-3">Price</th>
+                  <th className="px-4 py-3">Created</th>
+                  <th className="px-4 py-3 text-center w-48">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {Array.isArray(displayProducts) &&
-                displayProducts.length > 0 ? (
-                  displayProducts.map((product, index) => {
-                    // Format the date for display
-                    const formattedDate = product.dateAdded 
-                      ? new Date(product.dateAdded).toLocaleDateString() 
-                      : 'N/A';
-                    
-                    return (
-                      <tr key={product._id}>
-                        <td className="px-3 py-2 border">{index+1}</td>
-                        <td className="px-3 py-2 border">{product.name}</td>
-                        <td className="px-3 py-2 border">
-                          {product.Category?.name || "No Category"}
-                        </td>
-                        <td className="px-3 py-2 border">
-                          {product.Desciption}
-                        </td>
-                        <td className="px-3 py-2 border">{product.quantity}</td>
-                        <td className="px-3 py-2 border">Ksh{product.Price}</td>
-                        <td className="px-3 py-2 border"><FormattedTime timestamp={product?.createdAt} /></td>
-                        <td className="px-4 py-2 border">
-                          <button
-                            onClick={() => handleremove(product._id)}
-                            className="h-10 w-24 bg-red-500 hover:bg-red-700 rounded-md text-white"
-                          >
-                            Remove
-                          </button>
+              <tbody className="divide-y divide-base-300">
+                {Array.isArray(displayProducts) && displayProducts.length > 0 ? (
+                  displayProducts.map((product, index) => (
+                    <tr
+                      key={product._id}
+                      className="hover:bg-base-200/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-center font-mono opacity-60">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-3 font-semibold">{product.name}</td>
+                      <td className="px-4 py-3 opacity-80">
+                        {product.Category?.name || "Uncategorized"}
+                      </td>
+                      <td className="px-4 py-3 opacity-70 max-w-xs truncate">
+                        {product.Desciption}
+                      </td>
+                      <td className="px-4 py-3 text-center font-mono">
+                        <span
+                          className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                            product.quantity < 5
+                              ? "bg-rose-500/10 text-rose-500"
+                              : "bg-base-200"
+                          }`}
+                        >
+                          {product.quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono font-medium">
+                        Ksh {Number(product.Price).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 opacity-60 text-xs">
+                        <FormattedTime timestamp={product?.createdAt} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleEditClick(product)}
-                            className="h-10 w-24 bg-green-500 ml-10 hover:bg-green-700 rounded-md text-white"
+                            className="px-3 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-lg text-xs font-semibold transition-colors"
                           >
                             Edit
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                          <button
+                            onClick={() => handleremove(product._id)}
+                            className="px-3 py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
-                      No products found.
+                    <td colSpan="8" className="text-center py-12 opacity-50">
+                      No products found matching your criteria.
                     </td>
                   </tr>
                 )}
@@ -331,7 +395,7 @@ function Productpage() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
