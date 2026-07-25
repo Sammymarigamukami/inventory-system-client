@@ -36,13 +36,11 @@ export const gettingallCategory = createAsyncThunk(
 );
 
 
-
-
 export const RemoveCategory = createAsyncThunk(
   'category/removecategory',
   async (CategoryId, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.delete(`category/removecategory/${CategoryId}`,CategoryId, { withCredentials: true });
+      const response = await axiosInstance.delete(`category/removecategory/${CategoryId}`, { withCredentials: true });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Category delete failed");

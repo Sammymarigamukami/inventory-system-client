@@ -57,16 +57,6 @@ function Orderpage() {
  
   }, [dispatch,  editorder]);
 
-
-
-
-
-
-
-
-
-
-
   useEffect(() => {
     if (query.trim() !== "") {
       const repeatTimeout = setTimeout(() => {
@@ -324,11 +314,11 @@ function Orderpage() {
                         {order.Product?.quantity}
                       </td>
                       <td className="px-3 py-2 border">
-                        ${order.Product?.price}
+                        Ksh{order.Product?.price}
                       </td>
                       <td className="px-3 py-2 border">{order?.Description}</td>
                  
-                      <td className="px-3 py-2 border">{order?.totalAmount}</td>
+                      <td className="px-3 py-2 border">Ksh{order?.totalAmount}</td>
                       <td className="px-3 py-2 border">{order?.status}</td>
                       <td className="px-3 py-2 border">{order.user?.name}</td>
                       <td className="px-3 py-2 border">

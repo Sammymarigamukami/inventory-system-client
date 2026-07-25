@@ -140,7 +140,7 @@ function Productpage() {
         </div>
         <div className="bg-blue-950 ml-10 rounded-xl block w-56 h-24">
           <h1 className="text-white font-bold ml-12 pt-5">Total store value</h1>
-          <p className="text-white font-bold pt-2 ml-24">$
+          <p className="text-white font-bold pt-2 ml-24">Ksh
             {getallproduct?.reduce((totalAmount, product) => {
               return totalAmount + product.Price;
             }, 0) || "0"}
@@ -301,7 +301,7 @@ function Productpage() {
                           {product.Desciption}
                         </td>
                         <td className="px-3 py-2 border">{product.quantity}</td>
-                        <td className="px-3 py-2 border">${product.Price}</td>
+                        <td className="px-3 py-2 border">Ksh{product.Price}</td>
                         <td className="px-3 py-2 border"><FormattedTime timestamp={product?.createdAt} /></td>
                         <td className="px-4 py-2 border">
                           <button

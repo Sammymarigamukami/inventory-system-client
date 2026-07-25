@@ -2,28 +2,32 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Gettopproduct from "../lib/Gettopproduct";
 import TopNavbar from "../Components/TopNavbar";
-import { LuUsers, LuClock, LuActivity } from "react-icons/lu"; // Icons for activity logs
+import { LuUsers, LuClock, LuActivity } from "react-icons/lu";
 import { getrecentActivityLogs } from "../features/activitySlice";
+import { staffUser, managerUser, adminUser } from "../features/authSlice"; // 👈 Import thunks
 import FormattedTime from "../lib/FormattedTime ";
-import { getSocket } from "../lib/socket"; // Import the getSocket function
+import { getSocket } from "../lib/socket";
 
 function Dashboardpage() {
   const { staffuser, manageruser, adminuser } = useSelector((state) => state.auth);
   const { recentuser } = useSelector((state) => state.activity);
   const dispatch = useDispatch();
 
-  const socket = getSocket()
+  const socket = getSocket();
+
   useEffect(() => {
+
+    dispatch(staffUser());
+    dispatch(managerUser());
+    dispatch(adminUser());
     dispatch(getrecentActivityLogs());
 
-    // Listen for new activity logs
     socket.on("newActivityLog", (newLog) => {
       console.log("New activity log:", newLog);
-      // Optionally, update the UI or refetch logs
     });
 
     return () => {
-      socket.off("newActivityLog"); // Clean up the listener
+      socket.off("newActivityLog");
     };
   }, [dispatch, socket]);
 
@@ -33,7 +37,6 @@ function Dashboardpage() {
       <div className="min-h-screen flex flex-col items-center p-10">
         <h1 className="text-3xl font-semibold mb-6">Dashboard</h1>
 
-        {/* User Count Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-white shadow-lg rounded-xl p-6 flex flex-col items-center w-56 h-56 hover:shadow-xl transition-shadow">
             <LuUsers className="text-5xl text-blue-500 mb-4" />
@@ -54,11 +57,9 @@ function Dashboardpage() {
           </div>
         </div>
 
-        {/* Top Products Section */}
         <Gettopproduct className="mt-20" />
       </div>
 
-      {/* Recent Activity Section */}
       <div className="mt-10 p-10 bg-gray-50">
         <h1 className="text-2xl font-bold mb-6">Recent Activity</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -73,7 +74,7 @@ function Dashboardpage() {
                     <LuActivity className="text-blue-500 text-2xl" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">{logs.userId.name || "Unknown User"}</h2>
+                    <h2 className="text-lg font-semibold">{logs.userId?.name || "Unknown User"}</h2>
                     <p className="text-sm text-gray-500">{logs.action}</p>
                   </div>
                 </div>

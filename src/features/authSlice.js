@@ -5,14 +5,13 @@ import toast from 'react-hot-toast';
 const initialState = {
   Authuser: JSON.parse(localStorage.getItem("user")) || null, 
   isUserSignup: false,
-  staffuser:null,
-  manageruser:null,
-  adminuser:null,
+  staffuser: [],   // Defaulting to empty arrays prevents length check runtime crashes
+  manageruser: [],
+  adminuser: [],
   isUserLogin: false,
   token: localStorage.getItem("token") || null,
   isupdateProfile: false,
 };
-
 
 export const signup = createAsyncThunk(
   "auth/signup",
@@ -28,7 +27,6 @@ export const signup = createAsyncThunk(
   }
 );
 
-// Login
 export const login = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -43,7 +41,6 @@ export const login = createAsyncThunk(
   }
 );
 
-// Logout
 export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -57,20 +54,18 @@ export const logout = createAsyncThunk(
     }
   }
 );
+
 export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (base64Image, { rejectWithValue }) => {
     try {
-  
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const token = localStorage.getItem('token');
-
 
       if (!storedUser || !token) {
         return rejectWithValue('User not authenticated. Please log in again.');
       }
 
-     
       const response = await axiosInstance.put(
         'auth/updateProfile',
         { ProfilePic: base64Image },
@@ -84,16 +79,13 @@ export const updateProfile = createAsyncThunk(
 
       const updatedData = response.data;
 
-    
       if (updatedData && updatedData.updatedUser) {
-       
         localStorage.setItem('user', JSON.stringify(updatedData.updatedUser));
-        return updatedData.updatedUser; // Return the updated user object
+        return updatedData.updatedUser;
       } else {
         throw new Error('Unexpected response structure');
       }
     } catch (error) {
-      console.error('Update profile error:', error);
       return rejectWithValue(
         error.response?.data?.message || 'Failed to update profile'
       );
@@ -101,58 +93,42 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
-
-
-
-
-export const staffUser=createAsyncThunk('auth/staffuser',async(_,{rejectWithValue})=>{
+// ✅ Fixed axios.get parameters
+export const staffUser = createAsyncThunk('auth/staffuser', async (_, { rejectWithValue }) => {
   try {
-
-    const response=await axiosInstance.get('auth/staffuser',_,{ withCredentials: true });
-    return response.data
-    
+    const response = await axiosInstance.get('auth/staffuser', { withCredentials: true });
+    return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || 'Failed to get staff user');
   }
-})
+});
 
-
-
-export const managerUser=createAsyncThunk('auth/manageruser',async(_,{rejectWithValue})=>{
+export const managerUser = createAsyncThunk('auth/manageruser', async (_, { rejectWithValue }) => {
   try {
-
-    const response=await axiosInstance.get('auth/manageruser',_,{ withCredentials: true });
-    return response.data
-    
+    const response = await axiosInstance.get('auth/manageruser', { withCredentials: true });
+    return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || 'Failed to get manager user');
   }
-})
+});
 
-
-
-export const adminUser=createAsyncThunk('auth/adminuser',async(_,{rejectWithValue})=>{
+export const adminUser = createAsyncThunk('auth/adminuser', async (_, { rejectWithValue }) => {
   try {
-
-    const response=await axiosInstance.get('auth/adminuser',_,{ withCredentials: true });
-    return response.data
-    
+    const response = await axiosInstance.get('auth/adminuser', { withCredentials: true });
+    return response.data;
   } catch (error) {
-    return rejectWithValue(error.response?.data?.message || 'Failed to get admin  user');
+    return rejectWithValue(error.response?.data?.message || 'Failed to get admin user');
   }
-})
+});
 
-export const removeusers=createAsyncThunk("auth/removeuser",async(UserId,{rejectWithValue})=>{
+export const removeusers = createAsyncThunk("auth/removeuser", async (UserId, { rejectWithValue }) => {
   try {
-
-    const response=await axiosInstance.delete(`auth/removeuser/${UserId}`,UserId,{ withCredentials: true });
-
-    return response.data
-
+    const response = await axiosInstance.delete(`auth/removeuser/${UserId}`, { withCredentials: true });
+    return response.data;
   } catch (error) {
-     return rejectWithValue(error.response?.data?.message || 'Failed to delete  user');
+    return rejectWithValue(error.response?.data?.message || 'Failed to delete user');
   }
-})
+});
 
 const authSlice = createSlice({
   name: "auth",
@@ -160,7 +136,6 @@ const authSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-     
       .addCase(signup.pending, (state) => {
         state.isUserSignup = true;
       })
@@ -168,14 +143,10 @@ const authSlice = createSlice({
         state.isUserSignup = false;
         state.Authuser = action.payload.savedUser; 
         state.token = action.payload.token; 
-
       })
-      .addCase(signup.rejected, (state, action) => {
+      .addCase(signup.rejected, (state) => {
         state.isUserSignup = false;
-
       })
-
-      
       .addCase(login.pending, (state) => {
         state.isUserLogin = true;
       })
@@ -183,96 +154,32 @@ const authSlice = createSlice({
         state.isUserLogin = false;
         state.Authuser = action.payload.user; 
         state.token = action.payload.token; 
- 
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(login.rejected, (state) => {
         state.isUserLogin = false;
-
       })
-
-    
       .addCase(logout.fulfilled, (state) => {
         state.Authuser = null;
         state.token = null;
         toast.success("Successfully logged out!");
       })
-      .addCase(logout.rejected, (state, action) => {
-     
-      })
-
       .addCase(updateProfile.pending, (state) => {
         state.isupdateProfile = true;
       })
-      
-
-      builder.addCase(updateProfile.fulfilled, (state, action) => {
+      .addCase(updateProfile.fulfilled, (state, action) => {
         state.isupdateProfile = false;
         state.Authuser = { ...state.Authuser, user: action.payload }; 
-      
       })
-      
-    
-
       .addCase(staffUser.fulfilled, (state, action) => {
-     
-        state. staffuser = action.payload
-
+        // Adjust if response is wrapped e.g., action.payload.users
+        state.staffuser = Array.isArray(action.payload) ? action.payload : action.payload.users || [];
       })
-      
-     
-      .addCase(staffUser.rejected,(state,action)=>{
-
- 
-      })
-
-      
-
-
       .addCase(managerUser.fulfilled, (state, action) => {
-    
-        state.manageruser = action.payload
-
+        state.manageruser = Array.isArray(action.payload) ? action.payload : action.payload.users || [];
       })
-      
-     
-      .addCase(managerUser.rejected,(state,action)=>{
-   
-      
-      })
-    
-
-
-
-
       .addCase(adminUser.fulfilled, (state, action) => {
-      
-        state.adminuser = action.payload
-        
-      })
-      
-     
-      .addCase(adminUser.rejected,(state,action)=>{
-      
-       
-      })
-
-
-      .addCase(removeusers.fulfilled, (state, action) => {
-      
-      
-        
-      })
-      
-     
-      .addCase(removeusers.rejected,(state,action)=>{
-      
-      
-      })
-    
-
-
-
-  
+        state.adminuser = Array.isArray(action.payload) ? action.payload : action.payload.users || [];
+      });
   },
 });
 
