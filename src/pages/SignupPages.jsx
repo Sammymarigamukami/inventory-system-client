@@ -50,6 +50,9 @@ function SignupPage() {
 
   const onSubmit = (data) => {
     const { terms, ...payload } = data;
+    console.log("Form Data:", payload);
+    console.log("Terms Accepted:", terms);
+    console.log("data", data);
     dispatch(signup(payload)).catch((error) => {
       console.error("Signup failed:", error);
     });

@@ -15,32 +15,36 @@ function Dashboardpage() {
   const { recentuser } = useSelector((state) => state.activity);
   const dispatch = useDispatch();
 
+  // Handle nested or flat Authuser state gracefully
+  const userRole = (Authuser?.role || Authuser?.user?.role || "").toLowerCase();
+  const userName = Authuser?.name || Authuser?.user?.name || userRole;
+
   useEffect(() => {
     const socket = getSocket();
 
-    // Fetch activity logs (accessible across roles)
+    // Fetch activity logs for all roles
     dispatch(getrecentActivityLogs());
 
-    // Only attempt to fetch user lists if the current user is an admin
-    if (Authuser?.role?.toLowerCase() === "admin") {
-      dispatch(staffUser());
-      dispatch(managerUser());
-      dispatch(adminUser());
-    }
+    // Fetch user lists
+    dispatch(staffUser());
+    dispatch(managerUser());
+    dispatch(adminUser());
 
     const handleNewActivity = (newLog) => {
       console.log("New activity log:", newLog);
       dispatch(getrecentActivityLogs());
     };
 
-    socket.on("newActivityLog", handleNewActivity);
+    if (socket) {
+      socket.on("newActivityLog", handleNewActivity);
+    }
 
     return () => {
-      socket.off("newActivityLog", handleNewActivity);
+      if (socket) {
+        socket.off("newActivityLog", handleNewActivity);
+      }
     };
-  }, [dispatch, Authuser?.role]);
-
-  const isAdmin = Authuser?.role?.toLowerCase() === "admin";
+  }, [dispatch, Authuser?.role || ""]); // Explicitly defaults to a string value
 
   return (
     <div className="bg-base-100 min-h-screen text-base-content transition-colors duration-300">
@@ -54,62 +58,60 @@ function Dashboardpage() {
               Dashboard Overview
             </h1>
             <p className="text-sm opacity-70 mt-1">
-              Welcome back, <span className="font-semibold capitalize">{Authuser?.name || Authuser?.role}</span>
+              Welcome back, <span className="font-semibold capitalize">{userName}</span>
             </p>
           </div>
         </div>
 
-        {/* User Count Stats Grid (Admin Only) */}
-        {isAdmin && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-            {/* Staff Card */}
-            <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
-                  Staff Users
-                </p>
-                <h2 className="text-3xl font-bold mt-1 text-blue-500">
-                  {staffuser?.length || 0}
-                </h2>
-              </div>
-              <div className="p-4 rounded-xl bg-blue-500/10 text-blue-500">
-                <LuUsers className="text-3xl" />
-              </div>
+        {/* User Count Stats Grid (Visible to all roles) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          {/* Staff Card */}
+          <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
+                Staff Users
+              </p>
+              <h2 className="text-3xl font-bold mt-1 text-blue-500">
+                {Array.isArray(staffuser) ? staffuser.length : 0}
+              </h2>
             </div>
-
-            {/* Managers Card */}
-            <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
-                  Managers
-                </p>
-                <h2 className="text-3xl font-bold mt-1 text-emerald-500">
-                  {manageruser?.length || 0}
-                </h2>
-              </div>
-              <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500">
-                <LuUsers className="text-3xl" />
-              </div>
-            </div>
-
-            {/* Admins Card */}
-            <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
-                  Admins
-                </p>
-                <h2 className="text-3xl font-bold mt-1 text-rose-500">
-                  {adminuser?.length || 0}
-                </h2>
-              </div>
-              <div className="p-4 rounded-xl bg-rose-500/10 text-rose-500">
-                <LuUsers className="text-3xl" />
-              </div>
+            <div className="p-4 rounded-xl bg-blue-500/10 text-blue-500">
+              <LuUsers className="text-3xl" />
             </div>
           </div>
-        )}
 
-        {/* Top Products Component Section */}
+          {/* Managers Card */}
+          <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
+                Managers
+              </p>
+              <h2 className="text-3xl font-bold mt-1 text-emerald-500">
+                {Array.isArray(manageruser) ? manageruser.length : 0}
+              </h2>
+            </div>
+            <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500">
+              <LuUsers className="text-3xl" />
+            </div>
+          </div>
+
+          {/* Admins Card */}
+          <div className="p-6 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200/40 shadow-xs transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
+                Admins
+              </p>
+              <h2 className="text-3xl font-bold mt-1 text-rose-500">
+                {Array.isArray(adminuser) ? adminuser.length : 0}
+              </h2>
+            </div>
+            <div className="p-4 rounded-xl bg-rose-500/10 text-rose-500">
+              <LuUsers className="text-3xl" />
+            </div>
+          </div>
+        </div>
+
+        {/* Top Products Section */}
         <div className="mb-12">
           <Gettopproduct />
         </div>

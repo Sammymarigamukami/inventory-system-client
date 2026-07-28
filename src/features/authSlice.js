@@ -2,8 +2,20 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axiosInstance from "../lib/axios";
 import toast from 'react-hot-toast';
 
+// Safe helper function to parse localStorage items without throwing
+const getSafeLocalStorage = (key) => {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item || item === "undefined" || item === "null") return null;
+    return JSON.parse(item);
+  } catch (error) {
+    console.error(`Error parsing localStorage key "${key}":`, error);
+    return null;
+  }
+};
+
 const initialState = {
-  Authuser: JSON.parse(localStorage.getItem("user")) || null, 
+  Authuser: getSafeLocalStorage("user"), 
   isUserSignup: false,
   staffuser: [],   // Defaulting to empty arrays prevents length check runtime crashes
   manageruser: [],
@@ -59,7 +71,7 @@ export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (base64Image, { rejectWithValue }) => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const storedUser = getSafeLocalStorage('user');
       const token = localStorage.getItem('token');
 
       if (!storedUser || !token) {
@@ -93,7 +105,7 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
-// ✅ Fixed axios.get parameters
+// Fixed axios.get parameters
 export const staffUser = createAsyncThunk('auth/staffuser', async (_, { rejectWithValue }) => {
   try {
     const response = await axiosInstance.get('auth/staffuser', { withCredentials: true });
@@ -171,7 +183,6 @@ const authSlice = createSlice({
         state.Authuser = { ...state.Authuser, user: action.payload }; 
       })
       .addCase(staffUser.fulfilled, (state, action) => {
-        // Adjust if response is wrapped e.g., action.payload.users
         state.staffuser = Array.isArray(action.payload) ? action.payload : action.payload.users || [];
       })
       .addCase(managerUser.fulfilled, (state, action) => {

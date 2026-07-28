@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import axiosInstance from "./axios";
-import { Chart as ChartJS, LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend } from "chart.js";
+import { 
+  Chart as ChartJS, 
+  LineElement, 
+  PointElement, 
+  CategoryScale, 
+  LinearScale, 
+  Title, 
+  Tooltip, 
+  Legend, 
+  Filler 
+} from "chart.js";
 
-ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
+// 2. Registered Filler in ChartJS
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend, Filler);
 
 const StockTransactionGraph = () => {
   const [chartData, setChartData] = useState(null);
@@ -12,7 +23,7 @@ const StockTransactionGraph = () => {
     const fetchData = async () => {
       try {
         const response = await axiosInstance.get("/stocktransaction/getallStockTransaction");
-        const transactions = response.data.transactions;
+        const transactions = response.data.transactions || [];
 
         transactions.sort((a, b) => new Date(a.transactionDate) - new Date(b.transactionDate));
 
