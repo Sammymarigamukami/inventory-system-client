@@ -12,6 +12,8 @@ import {
   EditProduct,
 } from "../features/productSlice";
 import { gettingallCategory } from "../features/categorySlice";
+// Assuming you have a supplierSlice; adjust name if different in your store
+import { gettingallSupplier } from "../features/SupplierSlice"; 
 import toast from "react-hot-toast";
 
 function Productpage() {
@@ -19,21 +21,26 @@ function Productpage() {
     (state) => state.product
   );
   const { getallCategory } = useSelector((state) => state.category);
+  const { getallSupplier: suppliers } = useSelector((state) => state.supplier || { getallSupplier: [] });
   const dispatch = useDispatch();
 
   const [query, setquery] = useState("");
   const [name, setName] = useState("");
   const [Category, setCategory] = useState("");
+  const [supplier, setSupplier] = useState("");
   const [Price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [Desciption, setDesciption] = useState("");
-  const [dateAdded, setDateAdded] = useState(new Date().toISOString().split("T")[0]);
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     dispatch(gettingallproducts());
     dispatch(gettingallCategory());
+    if (gettingallSupplier) {
+      dispatch(gettingallSupplier());
+    }
   }, [dispatch, editedProduct, isproductadd]);
 
   // Debounced Search Handler
@@ -51,11 +58,23 @@ function Productpage() {
   const resetForm = () => {
     setName("");
     setCategory("");
+    setSupplier("");
     setPrice("");
     setQuantity("");
-    setDesciption("");
+    setDescription("");
+    setImage("");
     setSelectedProduct(null);
-    setDateAdded(new Date().toISOString().split("T")[0]);
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result); // Base64 string for immediate rendering/upload
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleremove = async (productId) => {
@@ -73,9 +92,11 @@ function Productpage() {
     setSelectedProduct(product);
     setName(product.name || "");
     setCategory(product.Category?._id || product.Category || "");
+    setSupplier(product.supplier?._id || product.supplier || "");
     setPrice(product.Price || "");
     setQuantity(product.quantity || "");
-    setDesciption(product.Desciption || "");
+    setDescription(product.description || product.Desciption || "");
+    setImage(product.image || "");
     setIsFormVisible(true);
   };
 
@@ -86,10 +107,11 @@ function Productpage() {
     const updatedData = {
       name,
       Category,
+      supplier: supplier || undefined,
       Price: Number(Price),
       quantity: Number(quantity),
-      Desciption,
-      dateAdded: selectedProduct.dateAdded || new Date().toISOString(),
+      description,
+      image,
     };
 
     dispatch(EditProduct({ id: selectedProduct._id, updatedData }))
@@ -108,11 +130,12 @@ function Productpage() {
     event.preventDefault();
     const productData = {
       name,
-      Desciption,
+      description,
       Category,
+      supplier: supplier || undefined,
       Price: Number(Price),
       quantity: Number(quantity),
-      dateAdded: new Date(dateAdded).toISOString(),
+      image,
     };
 
     dispatch(Addproduct(productData))
@@ -129,7 +152,6 @@ function Productpage() {
 
   const displayProducts = query.trim() !== "" ? searchdata : getallproduct;
 
-  // Total inventory valuation calculation
   const totalStoreValue =
     getallproduct?.reduce((total, prod) => {
       const price = Number(prod.Price) || 0;
@@ -142,7 +164,7 @@ function Productpage() {
       <TopNavbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Top Metric Cards */}
+        {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           <div className="bg-base-200 border border-base-300 p-6 rounded-2xl shadow-sm">
             <h2 className="text-xs font-semibold uppercase tracking-wider opacity-60">
@@ -189,7 +211,7 @@ function Productpage() {
           </button>
         </div>
 
-        {/* Sliding Side Form Drawer Overlay */}
+        {/* Sliding Side Form Drawer */}
         {isFormVisible && (
           <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
             <div className="w-full max-w-md bg-base-100 h-full p-6 border-l border-base-300 overflow-y-auto shadow-2xl flex flex-col justify-between">
@@ -211,6 +233,7 @@ function Productpage() {
                   onSubmit={selectedProduct ? handleEditSubmit : submitProduct}
                   className="space-y-4"
                 >
+                  {/* Product Name */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Product Name
@@ -225,6 +248,7 @@ function Productpage() {
                     />
                   </div>
 
+                  {/* Category */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Category
@@ -244,20 +268,71 @@ function Productpage() {
                     </select>
                   </div>
 
+                  {/* Supplier */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Supplier
+                    </label>
+                    <select
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">Select a supplier (Optional)</option>
+                      {Array.isArray(suppliers) &&
+                        suppliers.map((sup) => (
+                          <option key={sup._id} value={sup._id}>
+                            {sup.name || sup.supplierName}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Product Image */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
+                      Image (URL or File Upload)
+                    </label>
+                    <input
+                      type="text"
+                      value={image}
+                      placeholder="https://example.com/image.jpg"
+                      onChange={(e) => setImage(e.target.value)}
+                      className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 mb-2"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="file-input file-input-bordered file-input-xs w-full"
+                    />
+                    {image && (
+                      <div className="mt-2">
+                        <img
+                          src={image}
+                          alt="Preview"
+                          className="h-16 w-16 object-cover rounded-lg border border-base-300"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Description
                     </label>
                     <textarea
-                      value={Desciption}
+                      value={description}
                       placeholder="Brief details about the product..."
-                      onChange={(e) => setDesciption(e.target.value)}
+                      onChange={(e) => setDescription(e.target.value)}
                       rows={3}
                       className="w-full p-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
                       required
                     />
                   </div>
 
+                  {/* Price & Quantity */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
@@ -323,8 +398,10 @@ function Productpage() {
               <thead className="bg-base-200/50 border-b border-base-300 text-xs uppercase opacity-70">
                 <tr>
                   <th className="px-4 py-3 w-12 text-center">#</th>
+                  <th className="px-4 py-3">Image</th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Supplier</th>
                   <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3 text-center">Qty</th>
                   <th className="px-4 py-3">Price</th>
@@ -342,12 +419,28 @@ function Productpage() {
                       <td className="px-4 py-3 text-center font-mono opacity-60">
                         {index + 1}
                       </td>
+                      <td className="px-4 py-3">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover rounded-lg border border-base-300"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-base-200 border border-base-300 flex items-center justify-center text-xs opacity-50">
+                            N/A
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-semibold">{product.name}</td>
                       <td className="px-4 py-3 opacity-80">
                         {product.Category?.name || "Uncategorized"}
                       </td>
+                      <td className="px-4 py-3 opacity-80">
+                        {product.supplier?.name || product.supplier?.supplierName || "N/A"}
+                      </td>
                       <td className="px-4 py-3 opacity-70 max-w-xs truncate">
-                        {product.Desciption}
+                        {product.description || product.Desciption}
                       </td>
                       <td className="px-4 py-3 text-center font-mono">
                         <span
@@ -386,7 +479,7 @@ function Productpage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="text-center py-12 opacity-50">
+                    <td colSpan="10" className="text-center py-12 opacity-50">
                       No products found matching your criteria.
                     </td>
                   </tr>
