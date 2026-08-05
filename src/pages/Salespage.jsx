@@ -31,6 +31,7 @@ function Salespage() {
 
   useEffect(() => {
     dispatch(gettingallSales());
+    dispatch(gettingallproducts());
   }, [dispatch]);
 
   useEffect(() => {
@@ -43,6 +44,16 @@ function Salespage() {
       dispatch(gettingallSales());
     }
   }, [query, dispatch]);
+
+  const handleProductSelect = (productId) => {
+    setProduct(productId);
+    const selectedProd = getallproduct?.find((p) => p._id === productId);
+    if (selectedProd) {
+      setPrice(selectedProd.price || 0);
+    } else {
+      setPrice("");
+    }
+  };
 
   const handleEditSubmit = (event) => {
     event.preventDefault();
@@ -79,7 +90,7 @@ function Salespage() {
 
     const salesData = {
       customerName: name,
-      products: { product: Product, quantity, price: Price },
+      products: { product: Product, quantity: Number(quantity), price: Number(Price) },
       paymentMethod: Payment,
       paymentStatus,
       status: Status
@@ -109,10 +120,15 @@ function Salespage() {
 
   const handleEditClick = (sales) => {
     setselectedSales(sales);
+    const prodId = sales.products?.product?._id || sales.products?.product || "";
     setName(sales.customerName || "");
-    setProduct(sales.products?.product?._id || sales.products?.product || "");
+    setProduct(prodId);
     setPayment(sales.paymentMethod || "");
-    setPrice(sales.products?.price || "");
+    
+    // Set price from sale item or lookup from product catalog
+    const catalogProduct = getallproduct?.find((p) => p._id === prodId);
+    setPrice(sales.products?.price ?? catalogProduct?.price ?? 0);
+
     setQuantity(sales.products?.quantity || "");
     setpaymentStatus(sales.paymentStatus || "");
     setStatus(sales.status || "");
@@ -171,13 +187,11 @@ function Salespage() {
         {/* --- MODAL DIALOGUE --- */}
         {isFormVisible && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop Blur Overlay */}
             <div
               className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity"
               onClick={() => setIsFormVisible(false)}
             ></div>
 
-            {/* Modal Box */}
             <div className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 sm:p-8 border border-base-300 bg-base-100 shadow-2xl transition-all scale-100">
               
               <div className="flex items-center justify-between pb-4 mb-6 border-b border-base-300">
@@ -213,12 +227,12 @@ function Salespage() {
                     <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1.5">Product</label>
                     <select
                       value={Product}
-                      onChange={(e) => setProduct(e.target.value)}
+                      onChange={(e) => handleProductSelect(e.target.value)}
                       required
                       className="w-full h-11 px-3.5 rounded-xl border border-base-300 bg-base-200/50 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     >
                       <option value="">Select Product</option>
-                      {getallproduct.map((product) => (
+                      {getallproduct?.map((product) => (
                         <option key={product._id} value={product._id}>
                           {product.name}
                         </option>
@@ -227,14 +241,17 @@ function Salespage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1.5">Price ($)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1.5">
+                      Unit Price (Ksh) <span className="text-[10px] lowercase text-amber-500">(auto-filled)</span>
+                    </label>
                     <input
                       type="number"
+                      step="0.01"
                       placeholder="0.00"
                       value={Price}
-                      required
-                      onChange={(e) => setPrice(e.target.value)}
-                      className="w-full h-11 px-3.5 rounded-xl border border-base-300 bg-base-200/50 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      readOnly
+                      disabled
+                      className="w-full h-11 px-3.5 rounded-xl border border-base-300 bg-base-300/40 opacity-70 text-sm cursor-not-allowed font-medium select-none focus:outline-none"
                     />
                   </div>
                 </div>
@@ -264,6 +281,7 @@ function Salespage() {
                       <option value={"cash"}>Cash</option>
                       <option value={"creditcard"}>Credit Card</option>
                       <option value={"banktransfer"}>Bank Transfer</option>
+                      <option value={"mpesa"}>M-Pesa</option>
                     </select>
                   </div>
                 </div>
@@ -322,8 +340,8 @@ function Salespage() {
                 <tr className="border-b border-base-300 bg-base-200/60 font-semibold opacity-80">
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Customer</th>
-                  <th className="px-5 py-3.5">Product</th>
-                  <th className="px-5 py-3.5">Total</th>
+                  <th className="px-5 py-3.5">Product Details</th>
+                  <th className="px-5 py-3.5">Total Amount</th>
                   <th className="px-5 py-3.5">Order Status</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Payment</th>
@@ -337,8 +355,15 @@ function Salespage() {
                     <tr key={sales?._id} className="hover:bg-base-200/40 transition-colors">
                       <td className="px-5 py-4 font-mono text-xs opacity-60">{index + 1}</td>
                       <td className="px-5 py-4 font-medium">{sales?.customerName}</td>
-                      <td className="px-5 py-4 opacity-70">
-                        {sales.products?.product?.name || "Unspecified"}
+                      <td className="px-5 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-base-content/90">
+                            {sales.products?.product?.name || "Deleted Product"}
+                          </span>
+                          <span className="text-xs opacity-60">
+                            Ksh{sales.products?.price ?? 0} × {sales.products?.quantity ?? 0} unit(s)
+                          </span>
+                        </div>
                       </td>
                       <td className="px-5 py-4 font-semibold text-emerald-500">
                         Ksh{sales?.totalAmount}

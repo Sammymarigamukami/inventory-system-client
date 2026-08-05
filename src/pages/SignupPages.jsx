@@ -5,6 +5,7 @@ import { signup } from "../features/authSlice";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import toast, { Toaster } from "react-hot-toast";
 
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
@@ -36,7 +37,6 @@ function SignupPage() {
     },
   });
 
-  // Redirect automatically when Authuser is updated
   useEffect(() => {
     if (Authuser?.role) {
       const roleRouteMap = {
@@ -48,19 +48,29 @@ function SignupPage() {
     }
   }, [Authuser, navigate]);
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     const { terms, ...payload } = data;
-    console.log("Form Data:", payload);
-    console.log("Terms Accepted:", terms);
-    console.log("data", data);
-    dispatch(signup(payload)).catch((error) => {
+
+    try {
+      const response = await dispatch(signup(payload)).unwrap();
+      toast.success(response?.message || "Signup successful!");
+    } catch (error) {
       console.error("Signup failed:", error);
-    });
+      
+      // Matches express backend: res.status(...).json({ error: "..." })
+      const serverMessage =
+        error?.error ||
+        error?.message ||
+        (typeof error === "string" ? error : "Signup failed. Please try again.");
+
+      toast.error(serverMessage);
+    }
   };
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content flex flex-col md:flex-row transition-colors duration-300">
-      {/* Left Column: Form Section */}
+      <Toaster position="top-right" reverseOrder={false} />
+
       <div className="w-full md:w-1/2 p-6 sm:p-12 flex items-center justify-center bg-base-100">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
@@ -73,7 +83,6 @@ function SignupPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Name Input */}
             <div>
               <label
                 htmlFor="name"
@@ -95,7 +104,6 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Email Input */}
             <div>
               <label
                 htmlFor="email"
@@ -117,7 +125,6 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Password Input */}
             <div>
               <label
                 htmlFor="password"
@@ -139,7 +146,6 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Role Selection */}
             <div>
               <label
                 htmlFor="role"
@@ -163,7 +169,6 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Terms and Conditions Checkbox */}
             <div>
               <div className="flex items-center gap-2 pt-2">
                 <input
@@ -186,7 +191,6 @@ function SignupPage() {
               )}
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isUserSignup}
@@ -210,9 +214,7 @@ function SignupPage() {
         </div>
       </div>
 
-      {/* Right Column: Hero Showcase */}
       <div className="hidden md:flex md:w-1/2 bg-slate-950 p-12 text-white flex-col justify-center relative overflow-hidden">
-        {/* Glow Effects */}
         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
           <div className="w-80 h-80 bg-emerald-600/30 rounded-full blur-3xl"></div>
           <div className="w-60 h-60 bg-blue-600/30 rounded-full blur-3xl absolute top-1/4 left-1/4"></div>

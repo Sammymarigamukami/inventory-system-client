@@ -72,8 +72,14 @@ function StockTransaction() {
         setIsFormVisible(false);
         dispatch(getAllStockTransactions());
       })
-      .catch(() => {
-        toast.error("Failed to add stock transaction");
+      .catch((error) => {
+        // Extract server response message or fall back to default
+        const errorMessage =
+          error?.message ||
+          error?.data?.message ||
+          (typeof error === "string" ? error : "Failed to add stock transaction");
+
+        toast.error(errorMessage);
       });
   };
 

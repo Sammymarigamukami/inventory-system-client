@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 
 function TopNavbar() {
   const { Authuser } = useSelector((state) => state.auth);
+  console.log("Authuser in TopNavbar:", Authuser);
 
   return (
     <div className="sticky top-0 z-40 w-full backdrop-blur-md bg-base-100/80 border-b border-base-300 transition-colors duration-300">
