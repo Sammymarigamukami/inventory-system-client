@@ -73,7 +73,6 @@ function StockTransaction() {
         dispatch(getAllStockTransactions());
       })
       .catch((error) => {
-        // Extract server response message or fall back to default
         const errorMessage =
           error?.message ||
           error?.data?.message ||
@@ -151,11 +150,13 @@ function StockTransaction() {
                     className="w-full h-11 px-3 bg-base-200 border border-base-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   >
                     <option value="">Select a product</option>
-                    {getallproduct?.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
+                    {/* Safe Array Guard */}
+                    {Array.isArray(getallproduct) &&
+                      getallproduct.map((item) => (
+                        <option key={item._id} value={item._id}>
+                          {item.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -196,11 +197,13 @@ function StockTransaction() {
                     className="w-full h-11 px-3 bg-base-200 border border-base-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   >
                     <option value="">Select a supplier</option>
-                    {getallSupplier?.map((sup) => (
-                      <option key={sup._id} value={sup._id}>
-                        {sup.name}
-                      </option>
-                    ))}
+                    {/* Safe Array Guard Fix */}
+                    {Array.isArray(getallSupplier) &&
+                      getallSupplier.map((sup) => (
+                        <option key={sup._id} value={sup._id}>
+                          {sup.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
