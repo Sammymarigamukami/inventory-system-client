@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import TopNavbar from "../Components/TopNavbar";
 import { IoMdAdd } from "react-icons/io";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { FiDownload } from "react-icons/fi"; 
 import { useDispatch, useSelector } from "react-redux";
+import { PDFDownloadLink } from "@react-pdf/renderer"; 
+import ProductReportPDF from "../downloadable/ProductReportPDF"; 
 import FormattedTime from "../lib/FormattedTime ";
 import {
   Addproduct,
@@ -12,7 +15,6 @@ import {
   EditProduct,
 } from "../features/productSlice";
 import { gettingallCategory } from "../features/categorySlice";
-// Assuming you have a supplierSlice; adjust name if different in your store
 import { gettingallSupplier } from "../features/SupplierSlice"; 
 import toast from "react-hot-toast";
 
@@ -38,9 +40,7 @@ function Productpage() {
   useEffect(() => {
     dispatch(gettingallproducts());
     dispatch(gettingallCategory());
-    if (gettingallSupplier) {
-      dispatch(gettingallSupplier());
-    }
+    dispatch(gettingallSupplier());
   }, [dispatch, editedProduct, isproductadd]);
 
   // Debounced Search Handler
@@ -71,7 +71,7 @@ function Productpage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result); // Base64 string for immediate rendering/upload
+        setImage(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -107,7 +107,7 @@ function Productpage() {
     const updatedData = {
       name,
       Category,
-      supplier: supplier || undefined,
+      ...(supplier ? { supplier } : {}),
       Price: Number(Price),
       quantity: Number(quantity),
       description,
@@ -132,7 +132,7 @@ function Productpage() {
       name,
       description,
       Category,
-      supplier: supplier || undefined,
+      ...(supplier ? { supplier } : {}),
       Price: Number(Price),
       quantity: Number(quantity),
       image,
@@ -152,12 +152,13 @@ function Productpage() {
 
   const displayProducts = query.trim() !== "" ? searchdata : getallproduct;
 
-  const totalStoreValue =
-    getallproduct?.reduce((total, prod) => {
-      const price = Number(prod.Price) || 0;
-      const qty = Number(prod.quantity) || 1;
-      return total + price * qty;
-    }, 0) || 0;
+  const totalStoreValue = Array.isArray(getallproduct)
+    ? getallproduct.reduce((total, prod) => {
+        const price = Number(prod.Price) || 0;
+        const qty = Number(prod.quantity) || 0;
+        return total + price * qty;
+      }, 0)
+    : 0;
 
   return (
     <div className="bg-base-100 min-h-screen text-base-content transition-colors duration-300">
@@ -178,7 +179,7 @@ function Productpage() {
               Total Store Value
             </h2>
             <p className="text-3xl font-bold mt-2 text-emerald-500">
-              Ksh {totalStoreValue.toLocaleString()}
+              Ksh {totalStoreValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
 
@@ -196,19 +197,50 @@ function Productpage() {
             type="text"
             value={query}
             onChange={(e) => setquery(e.target.value)}
-            className="w-full sm:w-96 h-11 px-4 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="w-full sm:w-80 h-11 px-4 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
             placeholder="Search products by name..."
           />
 
-          <button
-            onClick={() => {
-              resetForm();
-              setIsFormVisible(true);
-            }}
-            className="w-full sm:w-auto h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
-          >
-            <IoMdAdd className="text-xl" /> Add New Product
-          </button>
+          <div className="flex w-full sm:w-auto items-center justify-end gap-3">
+            {/* Remounting condition via array key forces full lifecycle instantiation */}
+            {Array.isArray(getallproduct) && getallproduct.length > 0 ? (
+              <PDFDownloadLink
+                key={getallproduct.length} 
+                document={<ProductReportPDF productsData={getallproduct} />}
+                fileName={`Inventory_Valuation_Report_${new Date().toISOString().split('T')[0]}.pdf`}
+              >
+                {({ blob, url, loading, error }) => (
+                  <button
+                    disabled={loading}
+                    className={`h-11 px-5 border border-base-300 hover:bg-base-200 text-base-content font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs ${
+                      loading ? "opacity-50 cursor-wait" : ""
+                    }`}
+                  >
+                    <FiDownload className="text-lg text-emerald-500" /> 
+                    {loading ? "Generating..." : "Export PDF"}
+                  </button>
+                )}
+              </PDFDownloadLink>
+            ) : (
+              <button
+                disabled
+                className="h-11 px-5 border border-base-300 opacity-50 cursor-not-allowed text-base-content font-medium rounded-xl flex items-center justify-center gap-2"
+              >
+                <FiDownload className="text-lg text-gray-400" /> 
+                Loading Data...
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                resetForm();
+                setIsFormVisible(true);
+              }}
+              className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+            >
+              <IoMdAdd className="text-xl" /> Add New Product
+            </button>
+          </div>
         </div>
 
         {/* Sliding Side Form Drawer */}
@@ -233,7 +265,6 @@ function Productpage() {
                   onSubmit={selectedProduct ? handleEditSubmit : submitProduct}
                   className="space-y-4"
                 >
-                  {/* Product Name */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Product Name
@@ -248,7 +279,6 @@ function Productpage() {
                     />
                   </div>
 
-                  {/* Category */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Category
@@ -268,7 +298,6 @@ function Productpage() {
                     </select>
                   </div>
 
-                  {/* Supplier */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Supplier
@@ -288,7 +317,6 @@ function Productpage() {
                     </select>
                   </div>
 
-                  {/* Product Image */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Image (URL or File Upload)
@@ -317,7 +345,6 @@ function Productpage() {
                     )}
                   </div>
 
-                  {/* Description */}
                   <div>
                     <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
                       Description
@@ -332,7 +359,6 @@ function Productpage() {
                     />
                   </div>
 
-                  {/* Price & Quantity */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase mb-1 opacity-70">
@@ -346,6 +372,7 @@ function Productpage() {
                         className="w-full h-10 px-3 bg-base-200 border border-base-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
                         required
                         min="0"
+                        step="any"
                       />
                     </div>
 
@@ -445,7 +472,7 @@ function Productpage() {
                       <td className="px-4 py-3 text-center font-mono">
                         <span
                           className={`px-2 py-1 rounded-md text-xs font-semibold ${
-                            product.quantity < 5
+                            product.quantity === 0
                               ? "bg-rose-500/10 text-rose-500"
                               : "bg-base-200"
                           }`}
@@ -454,7 +481,7 @@ function Productpage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono font-medium">
-                        Ksh {Number(product.Price).toLocaleString()}
+                        Ksh {Number(product.Price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 opacity-60 text-xs">
                         <FormattedTime timestamp={product?.createdAt} />

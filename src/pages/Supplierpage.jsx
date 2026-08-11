@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import TopNavbar from "../Components/TopNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { IoMdAdd } from "react-icons/io";
-import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { MdKeyboardDoubleArrowLeft, MdFileDownload } from "react-icons/md";
 import {
   CreateSupplier,
   gettingallSupplier,
@@ -13,6 +13,10 @@ import {
 import { gettingallproducts } from "../features/productSlice";
 import toast from "react-hot-toast";
 import FormattedTime from "../lib/FormattedTime ";
+
+// React PDF Engine Imports
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import SupplierPDFReport from "../downloadable/SupplierPDFReport"; // Make sure path matches where you put the file above
 
 function Supplierpage() {
   const { getallSupplier, searchdata, editedsupplier } = useSelector(
@@ -63,7 +67,6 @@ function Supplierpage() {
     setEmail(supplier.contactInfo?.email || "");
     setAddress(supplier.contactInfo?.address || "");
 
-    // Handle array or populated object structure for products
     const initialProduct = Array.isArray(supplier?.productsSupplied)
       ? supplier.productsSupplied[0]?._id || supplier.productsSupplied[0] || ""
       : supplier?.productsSupplied?._id || supplier?.productsSupplied || "";
@@ -172,15 +175,31 @@ function Supplierpage() {
             placeholder="Search suppliers by name or email..."
           />
 
-          <button
-            onClick={() => {
-              resetForm();
-              setIsFormVisible(true);
-            }}
-            className="w-full sm:w-auto h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs"
-          >
-            <IoMdAdd className="text-xl" /> Add Supplier
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {/* Download Report PDF Hook Trigger Button */}
+            <PDFDownloadLink
+              document={<SupplierPDFReport suppliersList={displaySuppliers} />}
+              fileName="suppliers_directory_report.pdf"
+              className="h-11 px-5 bg-base-200 border border-base-300 hover:bg-base-300 text-base-content font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer text-sm"
+            >
+              {({ loading }) => (
+                <>
+                  <MdFileDownload className="text-xl text-rose-500" />
+                  <span>{loading ? "Compiling PDF..." : "Download PDF"}</span>
+                </>
+              )}
+            </PDFDownloadLink>
+
+            <button
+              onClick={() => {
+                resetForm();
+                setIsFormVisible(true);
+              }}
+              className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs text-sm"
+            >
+              <IoMdAdd className="text-xl" /> Add Supplier
+            </button>
+          </div>
         </div>
 
         {/* Side Drawer Form Overlay */}

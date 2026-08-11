@@ -3,6 +3,7 @@ import TopNavbar from "../Components/TopNavbar";
 import { IoMdAdd } from "react-icons/io";
 import { MdClose } from "react-icons/md";
 import { FiSearch } from "react-icons/fi";
+import { HiDownload } from "react-icons/hi"; // Icon for Report Generation
 import { useDispatch, useSelector } from "react-redux";
 import { gettingallproducts } from '../features/productSlice';
 import FormattedTime from "../lib/FormattedTime ";
@@ -11,6 +12,7 @@ import {
 } from "../features/salesSlice";
 import SalesChart from '../lib/Salesgraph';
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx"; // Ensure xlsx package is installed: npm install xlsx
 
 function Salespage() {
   const { getallsales, searchdata } = useSelector((state) => state.sales);
@@ -47,12 +49,6 @@ function Salespage() {
 
   const handleProductSelect = (productId) => {
     setProduct(productId);
-    const selectedProd = getallproduct?.find((p) => p._id === productId);
-    if (selectedProd) {
-      setPrice(selectedProd.price || 0);
-    } else {
-      setPrice("");
-    }
   };
 
   const handleEditSubmit = (event) => {
@@ -124,11 +120,7 @@ function Salespage() {
     setName(sales.customerName || "");
     setProduct(prodId);
     setPayment(sales.paymentMethod || "");
-    
-    // Set price from sale item or lookup from product catalog
-    const catalogProduct = getallproduct?.find((p) => p._id === prodId);
-    setPrice(sales.products?.price ?? catalogProduct?.price ?? 0);
-
+    setPrice(sales.products?.price ?? "");
     setQuantity(sales.products?.quantity || "");
     setpaymentStatus(sales.paymentStatus || "");
     setStatus(sales.status || "");
@@ -136,6 +128,45 @@ function Salespage() {
   };
 
   const displaySales = query.trim() !== "" ? searchdata : getallsales;
+
+  // --- GENERATE RESULTS (EXCEL EXPORT FUNCTION) ---
+  const handleGenerateReport = () => {
+    if (!displaySales || displaySales.length === 0) {
+      toast.error("No transactional records found to export.");
+      return;
+    }
+
+    try {
+      const formattedData = displaySales.map((sale, index) => ({
+        "Index": index + 1,
+        "Customer Name": sale?.customerName || "N/A",
+        "Product Name": sale?.products?.product?.name || "Deleted Product",
+        "Unit Price (Ksh)": sale?.products?.price ?? 0,
+        "Quantity": sale?.products?.quantity ?? 0,
+        "Total Amount (Ksh)": sale?.totalAmount ?? 0,
+        "Order Status": (sale?.status || "pending").toUpperCase(),
+        "Payment Method": (sale?.paymentMethod || "N/A").toUpperCase(),
+        "Payment Status": (sale?.paymentStatus || "pending").toUpperCase(),
+        "Transaction Date": sale?.createdAt ? new Date(sale.createdAt).toLocaleDateString() : "N/A"
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Records");
+
+      // Auto-fit column widths
+      const maxColWidths = Object.keys(formattedData[0] || {}).map(key => ({
+        wch: Math.max(key.length, ...formattedData.map(row => String(row[key] ?? "").length)) + 3
+      }));
+      worksheet["!cols"] = maxColWidths;
+
+      XLSX.writeFile(workbook, `Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success("Sales report generated successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error generating sales report");
+    }
+  };
 
   return (
     <div className="bg-base-100 min-h-screen text-base-content transition-colors duration-300">
@@ -158,7 +189,7 @@ function Salespage() {
           <SalesChart />
         </div>
 
-        {/* Action Bar (Search & Add) */}
+        {/* Action Bar (Search, Generate Report & Add Sale) */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <div className="relative w-full sm:w-96">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50 text-lg" />
@@ -171,17 +202,29 @@ function Salespage() {
             />
           </div>
 
-          <button
-            onClick={() => {
-              setIsFormVisible(true);
-              setselectedSales(null);
-              resetForm();
-            }}
-            className="w-full sm:w-auto h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all duration-200"
-          >
-            <IoMdAdd className="text-xl" />
-            <span>Add New Sale</span>
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Generate Result Button */}
+            <button
+              onClick={handleGenerateReport}
+              className="w-full sm:w-auto h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all duration-200"
+            >
+              <HiDownload className="text-xl" />
+              <span>Generate Result</span>
+            </button>
+
+            {/* Add New Sale Button */}
+            <button
+              onClick={() => {
+                setIsFormVisible(true);
+                setselectedSales(null);
+                resetForm();
+              }}
+              className="w-full sm:w-auto h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all duration-200"
+            >
+              <IoMdAdd className="text-xl" />
+              <span>Add New Sale</span>
+            </button>
+          </div>
         </div>
 
         {/* --- MODAL DIALOGUE --- */}
@@ -242,16 +285,16 @@ function Salespage() {
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-1.5">
-                      Unit Price (Ksh) <span className="text-[10px] lowercase text-amber-500">(auto-filled)</span>
+                      Unit Price (Ksh)
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={Price}
-                      readOnly
-                      disabled
-                      className="w-full h-11 px-3.5 rounded-xl border border-base-300 bg-base-300/40 opacity-70 text-sm cursor-not-allowed font-medium select-none focus:outline-none"
+                      required
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full h-11 px-3.5 rounded-xl border border-base-300 bg-base-200/50 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium"
                     />
                   </div>
                 </div>

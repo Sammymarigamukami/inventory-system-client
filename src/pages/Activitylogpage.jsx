@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { getAllActivityLogs, getsingleUserActivityLogs } from "../features/activitySlice";
 import TopNavbar from "../Components/TopNavbar";
 import FormattedTime from "../lib/FormattedTime ";
+import { MdFileDownload } from "react-icons/md";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import ActivityLogsPDFReport from "../downloadable/ActivityLogsPDFReport"; 
 
 function Activitylogpage() {
   const [logs, setLogs] = useState([]);
@@ -63,13 +66,27 @@ function Activitylogpage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Header Bar */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 bg-clip-text text-transparent">
               Activity Logs
             </h1>
             <p className="text-sm opacity-70 mt-1">Real-time system audit trails and user actions</p>
           </div>
+
+          {/* Export Action Trigger */}
+          <PDFDownloadLink
+            document={<ActivityLogsPDFReport dataLogs={logs} />}
+            fileName="system_activity_logs.pdf"
+            className="w-full sm:w-auto px-4 h-11 bg-base-200 border border-base-300 hover:bg-base-300 text-base-content font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+          >
+            {({ loading }) => (
+              <>
+                <MdFileDownload className="text-lg text-rose-500" />
+                <span>{loading ? "Compiling PDF..." : "Export PDF Logs"}</span>
+              </>
+            )}
+          </PDFDownloadLink>
         </div>
 
         {/* Logs Table Container */}
