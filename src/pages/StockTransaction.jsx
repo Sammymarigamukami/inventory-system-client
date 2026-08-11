@@ -14,6 +14,11 @@ import { gettingallSupplier } from "../features/SupplierSlice";
 import { gettingallproducts } from "../features/productSlice";
 import toast from "react-hot-toast";
 
+// PDF Reporting Dependencies
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import StockReportPDF from "../downloadable/StockReportPDF"; 
+import { HiOutlineDownload } from "react-icons/hi"; // Tailwind matching download action icon
+
 function StockTransaction() {
   const { getallStocks, iscreatedStocks, searchdata } = useSelector(
     (state) => state.stocktransaction
@@ -114,15 +119,35 @@ function StockTransaction() {
             className="w-full sm:w-96 h-11 px-4 bg-base-200 border border-base-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all"
             placeholder="Search stock transactions..."
           />
-          <button
-            onClick={() => {
-              resetForm();
-              setIsFormVisible(true);
-            }}
-            className="w-full sm:w-auto px-6 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-          >
-            <IoMdAdd className="text-lg" /> Add Stock
-          </button>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {/* Download PDF Action Trigger Link */}
+            <PDFDownloadLink
+              document={<StockReportPDF data={displaystock} />}
+              fileName={`Stock_Report_${new Date().toISOString().split('T')[0]}.pdf`}
+              className="w-full sm:w-auto"
+            >
+              {({ loading }) => (
+                <button
+                  disabled={loading || !displaystock || displaystock.length === 0}
+                  className="w-full sm:w-auto px-5 h-11 bg-base-200 hover:bg-base-300 border border-base-300 font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer text-base-content disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <HiOutlineDownload className="text-lg" />
+                  {loading ? "Compiling PDF..." : "Generate Report"}
+                </button>
+              )}
+            </PDFDownloadLink>
+
+            <button
+              onClick={() => {
+                resetForm();
+                setIsFormVisible(true);
+              }}
+              className="w-full sm:w-auto px-6 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <IoMdAdd className="text-lg" /> Add Stock
+            </button>
+          </div>
         </div>
 
         {/* Slide-Over Drawer Form */}
@@ -150,7 +175,6 @@ function StockTransaction() {
                     className="w-full h-11 px-3 bg-base-200 border border-base-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   >
                     <option value="">Select a product</option>
-                    {/* Safe Array Guard */}
                     {Array.isArray(getallproduct) &&
                       getallproduct.map((item) => (
                         <option key={item._id} value={item._id}>
@@ -197,7 +221,6 @@ function StockTransaction() {
                     className="w-full h-11 px-3 bg-base-200 border border-base-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   >
                     <option value="">Select a supplier</option>
-                    {/* Safe Array Guard Fix */}
                     {Array.isArray(getallSupplier) &&
                       getallSupplier.map((sup) => (
                         <option key={sup._id} value={sup._id}>
